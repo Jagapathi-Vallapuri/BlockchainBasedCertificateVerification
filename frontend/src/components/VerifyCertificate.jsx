@@ -2,80 +2,66 @@ import { useState } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "../utils/contractABI";
 
-const IssueCertificate = ({ fileHash, account }) => {
+const VerifyCertificate = () => {
   const [student, setStudent] = useState("");
   const [certType, setCertType] = useState("");
+  const [file, setFile] = useState(null);
   const [status, setStatus] = useState("");
 
-  const issueCert = async () => {
-    if (!fileHash) return alert("Please upload a certificate first");
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
 
-    if (!ethers.isAddress(student)) {
-      setStatus("❌ Invalid Ethereum address");
-      return;
-    }
+  const computeSHA256 = async (file) => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    return hashHex;
+  };
+
+  const verify = async () => {
+    if (!file) return alert("Please select a certificate file");
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
 
-      const tx = await contract.issueCertificate(student, certType, fileHash);
-      await tx.wait();
+      const [storedHash, issuedAt] = await contract.getCertificate(student, certType);
+      const localHash = await computeSHA256(file);
 
-      setStatus("✅ Certificate issued on-chain!");
+      if (localHash === storedHash) {
+        const timestamp = Number(issuedAt);
+        setStatus(`Certificate is valid! Issued on ${new Date(timestamp * 1000).toLocaleString()}`);
+      } else {
+        setStatus("Certificate file is invalid or tampered");
+      }
     } catch (err) {
       console.error(err);
-      setStatus("❌ Failed to issue certificate");
-    }
-  };
-
-  const styles = {
-    input: {
-      display: "block",
-      margin: "0.5rem 0",
-      background: "#1e1e2f",
-      color: "#ffffff",
-      border: "1px solid #555",
-      padding: "0.5rem",
-      borderRadius: "6px",
-    },
-    button: {
-      backgroundColor: "#551A8B",
-      color: "#ffffff",
-      border: "none",
-      padding: "0.6rem 1.2rem",
-      fontSize: "1rem",
-      borderRadius: "8px",
-      cursor: "pointer",
-    },
-    status: {
-      marginTop: "0.8rem",
-      color: "#cccccc"
+      setStatus(" Verification failed. Check address and cert type.");
     }
   };
 
   return (
     <div>
-      <h3>Issue Certificate</h3>
+      <h3>Verify Certificate</h3>
       <input
-        style={styles.input}
         type="text"
-        placeholder="Student Address (0x...)"
+        placeholder="Student Wallet Address"
         value={student}
         onChange={(e) => setStudent(e.target.value)}
       />
       <input
-        style={styles.input}
         type="text"
-        placeholder="Certificate Type (e.g., BTech)"
+        placeholder="Certificate Type"
         value={certType}
         onChange={(e) => setCertType(e.target.value)}
       />
-      <button style={styles.button} onClick={issueCert}>Issue Certificate</button>
-      <p style={styles.status}>{status}</p>
+      <input type="file" accept=".pdf" onChange={handleFileChange} />
+      <button onClick={verify}>Verify</button>
+      <p>{status}</p>
     </div>
   );
 };
 
-export default IssueCertificate;
+export default VerifyCertificate;

@@ -1,74 +1,63 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { ethers } from "ethers";
+import { CONTRACT_ABI, CONTRACT_ADDRESS } from "../utils/contractABI";
 
-const UploadCertificate = ({ setFileHash, setFileUrl }) => {
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('');
+const IssueCertificate = ({ fileHash, account }) => {
+  const [student, setStudent] = useState("");
+  const [certType, setCertType] = useState("");
+  const [status, setStatus] = useState("");
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
+  const issueCert = async () => {
+    if (!fileHash) {
+      alert("Please upload a certificate first");
+      return;
+    }
 
-  const handleUpload = async () => {
-    if (!file) return alert('Please select a file first');
-    setStatus('Uploading...');
-
-    const formData = new FormData();
-    formData.append('file', file);
+    if (!ethers.isAddress(student)) {
+      setStatus(" Invalid Ethereum address");
+      return;
+    }
 
     try {
-      const res = await fetch('http://localhost:4000/upload-certificate', {
-        method: 'POST',
-        body: formData,
-      });
+      console.log("fwiusbx");
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        signer
+      );
 
-      const data = await res.json();
+      const tx = await contract.issueCertificate(student, certType, fileHash);
+      console.log("waiting");
+      await tx.wait();
 
-      if (data.fileHash) {
-        setFileHash(data.fileHash);
-        setFileUrl(data.fileUrl);
-        setStatus('Upload successful');
-      } else {
-        setStatus('Upload failed');
-      }
+      setStatus(" Certificate issued on-chain!");
     } catch (err) {
       console.error(err);
-      setStatus('Error uploading file');
-    }
-  };
-
-  const styles = {
-    input: {
-      display: "block",
-      margin: "0.5rem 0",
-      background: "#1e1e2f",
-      color: "#ffffff",
-      border: "1px solid #555",
-      padding: "0.5rem",
-      borderRadius: "6px",
-    },
-    button: {
-      backgroundColor: "#4b0082",
-      color: "#ffffff",
-      border: "none",
-      padding: "0.6rem 1.2rem",
-      fontSize: "1rem",
-      borderRadius: "8px",
-      cursor: "pointer",
-    },
-    status: {
-      marginTop: "0.8rem",
-      color: "#cccccc"
+      setStatus(" Failed to issue certificate");
     }
   };
 
   return (
     <div>
-      <h3>Upload Certificate File (PDF)</h3>
-      <input style={styles.input} type="file" accept=".pdf" onChange={handleFileChange} />
-      <button style={styles.button} onClick={handleUpload}>Upload to Server</button>
-      <p style={styles.status}>{status}</p>
+      <h3>Issue Certificate</h3>
+      <input
+        type="text"
+        placeholder="Student Address (0x...)"
+        value={student}
+        onChange={(e) => setStudent(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Certificate Type (e.g., BTech)"
+        value={certType}
+        onChange={(e) => setCertType(e.target.value)}
+      />
+      <button onClick={issueCert}>Issue Certificate</button>
+      <p>{status}</p>
     </div>
   );
 };
 
-export default UploadCertificate;
+export default IssueCertificate;
