@@ -23,7 +23,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// POST /upload-certificate
 app.post('/upload-certificate', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -39,9 +38,8 @@ app.post('/upload-certificate', upload.single('file'), (req, res) => {
   });
 });
 
-// GET /certificates/:filename
 app.use('/certificates', express.static(uploadDir));
 
 app.listen(PORT, () => {
-  console.log(`🚀 Certificate backend running at http://localhost:${PORT}`);
+  console.log(` Certificate backend running at http://localhost:${PORT}`);
 });
