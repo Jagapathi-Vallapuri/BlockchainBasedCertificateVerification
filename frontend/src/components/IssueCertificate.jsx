@@ -19,7 +19,6 @@ const IssueCertificate = ({ fileHash, account }) => {
     }
 
     try {
-      console.log("fwiusbx");
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
@@ -29,7 +28,6 @@ const IssueCertificate = ({ fileHash, account }) => {
       );
 
       const tx = await contract.issueCertificate(student, certType, fileHash);
-      console.log("waiting");
       await tx.wait();
 
       setStatus(" Certificate issued on-chain!");

@@ -1,4 +1,5 @@
-export const CONTRACT_ADDRESS = "0x95D4583f2759854229BA204F3D5910094DA955f5";
+export const CONTRACT_ADDRESS = "";
+//paste deployed contract address here
 
 export const CONTRACT_ABI = [
   {
@@ -10,7 +11,7 @@ export const CONTRACT_ABI = [
     "inputs": [
       { "internalType": "address", "name": "student", "type": "address" },
       { "internalType": "string", "name": "certType", "type": "string" },
-      { "internalType": "string", "name": "ipfsHash", "type": "string" }
+      { "internalType": "string", "name": "fileHash", "type": "string" }
     ],
     "name": "issueCertificate",
     "outputs": [],
@@ -22,21 +23,10 @@ export const CONTRACT_ABI = [
       { "internalType": "address", "name": "student", "type": "address" },
       { "internalType": "string", "name": "certType", "type": "string" }
     ],
-    "name": "revokeCertificate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "address", "name": "student", "type": "address" },
-      { "internalType": "string", "name": "certType", "type": "string" }
-    ],
     "name": "getCertificate",
     "outputs": [
-      { "internalType": "string", "name": "ipfsHash", "type": "string" },
-      { "internalType": "uint256", "name": "issueDate", "type": "uint256" },
-      { "internalType": "bool", "name": "isRevoked", "type": "bool" }
+      { "internalType": "string", "name": "fileHash", "type": "string" },
+      { "internalType": "uint256", "name": "issuedAt", "type": "uint256" }
     ],
     "stateMutability": "view",
     "type": "function"
