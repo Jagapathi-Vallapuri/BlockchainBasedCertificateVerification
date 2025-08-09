@@ -5,7 +5,7 @@ contract CertificateRegistry {
     address public admin;
 
     struct Certificate {
-        string fileHash;       // SHA-256 hash of the certificate file
+        string cid;       // IPFS CID of the certificate file
         uint256 issuedAt;
     }
 
@@ -22,24 +22,24 @@ contract CertificateRegistry {
         admin = msg.sender;
     }
 
-    function issueCertificate(address student, string memory certType, string memory fileHash) public onlyAdmin {
-        require(bytes(certificates[student][certType].fileHash).length == 0, "Certificate already exists");
+    function issueCertificate(address student, string memory certType, string memory cid) public onlyAdmin {
+        require(bytes(certificates[student][certType].cid).length == 0, "Certificate already exists");
 
         certificates[student][certType] = Certificate({
-            fileHash: fileHash,
+            cid: cid,
             issuedAt: block.timestamp
         });
 
-        emit CertificateIssued(student, certType, fileHash);
+        emit CertificateIssued(student, certType, cid);
     }
 
     function getCertificate(address student, string memory certType) public view returns (
-        string memory fileHash,
+        string memory cid,
         uint256 issuedAt
     ) {
         Certificate memory cert = certificates[student][certType];
-        require(bytes(cert.fileHash).length != 0, "Certificate not found");
+        require(bytes(cert.cid).length != 0, "Certificate not found");
 
-        return (cert.fileHash, cert.issuedAt);
+        return (cert.cid, cert.issuedAt);
     }
 }

@@ -2,13 +2,13 @@ import { useState } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "../utils/contractABI";
 
-const IssueCertificate = ({ fileHash, account }) => {
+const IssueCertificate = ({ cid, account }) => {
   const [student, setStudent] = useState("");
   const [certType, setCertType] = useState("");
   const [status, setStatus] = useState("");
 
   const issueCert = async () => {
-    if (!fileHash) {
+    if (!cid) {
       alert("Please upload a certificate first");
       return;
     }
@@ -27,7 +27,7 @@ const IssueCertificate = ({ fileHash, account }) => {
         signer
       );
 
-      const tx = await contract.issueCertificate(student, certType, fileHash);
+      const tx = await contract.issueCertificate(student, certType, cid);
       await tx.wait();
 
       setStatus(" Certificate issued on-chain!");

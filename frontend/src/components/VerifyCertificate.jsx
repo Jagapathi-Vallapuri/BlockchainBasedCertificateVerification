@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ethers } from "ethers";
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from "../utils/contractABI";
+import { of as computeCID } from 'ipfs-only-hash';
 
 const VerifyCertificate = () => {
   const [student, setStudent] = useState("");
@@ -27,18 +28,21 @@ const VerifyCertificate = () => {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
 
-      const [storedHash, issuedAt] = await contract.getCertificate(student, certType);
-      const localHash = await computeSHA256(file);
+      const [storedCid, issuedAt] = await contract.getCertificate(student, certType);
 
-      if (localHash === storedHash) {
+  const buffer = await file.arrayBuffer();
+  const localCid = await computeCID(new Uint8Array(buffer));
+
+      if (localCid === storedCid) {
         const timestamp = Number(issuedAt);
         setStatus(`Certificate is valid! Issued on ${new Date(timestamp * 1000).toLocaleString()}`);
       } else {
+        console.log("Verification failed: computed CID", localCid, "stored CID", storedCid);
         setStatus("Certificate file is invalid or tampered");
       }
     } catch (err) {
       console.error(err);
-      setStatus(" Verification failed. Check address and cert type.");
+      setStatus("Verification failed. Check address and cert type.");
     }
   };
 
