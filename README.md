@@ -1,13 +1,17 @@
 # Blockchain Based Certificate Verification
 
-A decentralized application (dApp) for issuing and verifying academic (or any) certificates on Ethereum. Certificates are represented on-chain by a hash (or IPFS CID) rather than the raw file, preserving integrity and minimizing storage costs.
+
+A decentralized application (dApp) for issuing and verifying academic (or any) certificates on Ethereum. Certificates are stored on IPFS, and the IPFS CID (Content Identifier) is saved on-chain for tamper-proof, decentralized verification. Verification is performed in the browser by recomputing the CID and comparing it to the on-chain value.
+
 
 ## Features (Current Version)
 - Solidity `CertificateRegistry` contract (admin-issued certificates stored per student + certificate type)
 - Truffle migration / build setup (Solidity 0.8.20)
 - React + Vite frontend (MetaMask / injected wallet) with RainbowKit + wagmi foundations
-- Simple Express backend for file upload & SHA-256 hashing (optional helper)
-- On-chain storage of certificate hash and timestamp
+- Express backend for file upload, IPFS integration, and SHA-256 hashing
+- IPFS Docker node for decentralized file storage
+- On-chain storage of IPFS CID (and optionally file hash)
+- Browser-based verification: computes CID in-browser and compares to on-chain value
 
 
 
@@ -19,29 +23,33 @@ A decentralized application (dApp) for issuing and verifying academic (or any) c
 - Local Ethereum JSON-RPC node (Ganache UI or Ganache CLI or Hardhat node). Examples use Ganache default `127.0.0.1:8545`.
 - MetaMask browser extension
 
-Optional (backend file hashing):
+
+Optional:
+- Docker (for running a local IPFS node)
 - `curl` or a REST client (Postman) for testing file upload API
 
 ---
+
 ## Project Structure
 ```
 contracts/               Solidity source
 migrations/              Truffle deployment scripts
 build/contracts/         Compiled artifacts (ABI + bytecode) after `truffle compile`
-backend/server.js        Express file upload + SHA-256 hashing helper
-frontend/                React + Vite UI
+backend/server.js        Express file upload, IPFS integration, and SHA-256 hashing
+frontend/                React + Vite UI (MetaMask, IPFS CID verification)
 truffle-config.js        Network & compiler config
 ```
 
 ---
 
+
 ## Smart Contract Overview
 Contract: `CertificateRegistry.sol`
 
 ```solidity
-struct Certificate { string fileHash; uint256 issuedAt; }
-issueCertificate(address student, string certType, string fileHash)  // admin only
-getCertificate(address student, string certType) -> (fileHash, issuedAt)
+struct Certificate { string ipfsCid; uint256 issuedAt; }
+issueCertificate(address student, string certType, string ipfsCid)  // admin only
+getCertificate(address student, string certType) -> (ipfsCid, issuedAt)
 ```
 Access Control: Only `admin` (deployer) can issue.
 Uniqueness: A student+certType pair can be issued only once.
@@ -122,7 +130,8 @@ Vite will show a local URL (default `http://127.0.0.1:5173`). Open it in the sam
 Click the wallet connect button (RainbowKit) or custom Connect component. Ensure network is the local Ganache network.
 
 ---
-## 6. (Optional) Run Backend File Hashing Service
+
+## 6. Run Backend with IPFS Integration
 In another terminal:
 ```bash
 cd backend
@@ -131,6 +140,21 @@ node server.js
 ```
 Service listens on `http://localhost:4000`.
 
+### IPFS Docker Node
+To run a local IPFS node (required for decentralized storage):
+```bash
+docker run -d \
+  --name ipfs-node \
+  -v ipfs_staging:/export \
+  -v ipfs_data:/data/ipfs \
+  -p 4001:4001 \
+  -p 5001:5001 \
+  -p 8080:8080 \
+  ipfs/kubo:latest daemon
+```
+This will expose the IPFS API at `http://127.0.0.1:5001` and the gateway at `http://127.0.0.1:8080`.
+
+### Uploading a File
 Upload a file (e.g., with `curl`):
 ```bash
 curl -F "file=@/path/to/certificate.pdf" http://localhost:4000/upload-certificate
@@ -139,39 +163,44 @@ Response example:
 ```json
 {
   "fileUrl": "http://localhost:4000/certificates/1691512345678-certificate.pdf",
-  "fileHash": "d2ab3c...sha256hex"
+  "fileHash": "d2ab3c...sha256hex",
+  "ipfsHash": "Qm... (the CID)"
 }
 ```
-Use the `fileHash` as the `fileHash` argument to `issueCertificate` (front-end may automate this).
+Use the `ipfsHash` as the argument to `issueCertificate` (the frontend automates this).
 
-> Integrity Note: You can alternatively compute the hash client-side (preferred for trust minimization) using `crypto.subtle.digest('SHA-256', ...)` or a library.
+> Integrity Note: The backend also returns a SHA-256 hash for legacy or off-chain verification, but the main verification is now CID-based.
 
 ---
+
 ## 7. Issue a Certificate (Admin)
 1. Ensure MetaMask is using the admin (deployer) account.
-2. Obtain the student's wallet address (the recipient) and a `certType` string (e.g., "BSC2025").
-3. Hash the certificate file (backend or client) to get `fileHash`.
-4. In the frontend form, enter student address, cert type, and hash, then submit.
+2. Upload the certificate file via the frontend. The backend will store it on IPFS and return the CID.
+3. Enter the student's wallet address and certificate type in the frontend form.
+4. The frontend will call `issueCertificate` with the student address, cert type, and CID.
 5. Confirm the transaction in MetaMask.
 6. Wait for transaction confirmation. You should see an emitted `CertificateIssued` event.
 
-On-chain storage key is `(student, certType)` mapping to hash + timestamp.
+On-chain storage key is `(student, certType)` mapping to CID + timestamp.
 
 ---
-## 8. Verify a Certificate
+
+## 8. Verify a Certificate (Browser-based, IPFS-powered)
 To verify you need:
 - Student address
 - Certificate type string
+- The original certificate file (PDF)
 
-Call `getCertificate(student, certType)` via the frontend (or Truffle console):
-```bash
-truffle console
-truffle(development)> const reg = await CertificateRegistry.deployed()
-truffle(development)> await reg.getCertificate("0xStudent...", "BSC2025")
+The frontend will:
+1. Call `getCertificate(student, certType)` to get the stored CID from the contract.
+2. Compute the CID of the uploaded file in the browser using [`ipfs-only-hash`](https://www.npmjs.com/package/ipfs-only-hash).
+3. Compare the computed CID to the on-chain CID.
+4. If they match, the certificate is valid and untampered.
+
+You can also access the file directly from IPFS using the CID:
 ```
-Return values: `[ fileHash, issuedAt ]` (will revert if not found).
-
-Compare the returned `fileHash` with a freshly computed hash of the presented certificate file. If they match, the certificate is authentic and unaltered.
+http://127.0.0.1:8080/ipfs/<CID>
+```
 
 ---
 ## 9. Truffle Console Tips
@@ -235,11 +264,13 @@ cd frontend && npm install && npm run dev
 ```
 
 ---
-## 16. MetaMask Verification Flow (Condensed)
+
+## 16. MetaMask & IPFS Verification Flow (Condensed)
 1. User receives file + (student addr, certType)
-2. User hashes file locally (SHA-256) -> H
-3. Frontend calls `getCertificate(student, certType)` -> returns storedHash
-4. Compare `H === storedHash` and ensure call succeeded (not reverted)
+2. User uploads file in the frontend verification form
+3. Frontend computes the IPFS CID in-browser
+4. Frontend calls `getCertificate(student, certType)` -> returns stored CID
+5. Compare computed CID to stored CID; if they match, the certificate is valid
 
 ---
 ## Contributing
