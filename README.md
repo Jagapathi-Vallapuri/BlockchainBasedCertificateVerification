@@ -1,5 +1,30 @@
 # Blockchain Based Certificate Verification
 
+## Monorepo & Workspaces
+This project uses a monorepo structure with [npm workspaces](https://docs.npmjs.com/cli/v7/using-npm/workspaces) for managing both backend and frontend. All dependencies are installed from the root, and scripts can be run for each workspace from the root as well.
+
+**Workspaces:**
+- `backend/` — Express server for file upload, IPFS, and hashing
+- `frontend/` — React + Vite UI for certificate management and verification
+
+**Key commands (run from project root):**
+```bash
+# Install all dependencies for all workspaces
+npm install
+
+# Start the backend server
+npm run start:backend
+
+# Start the frontend dev server
+npm run start:frontend
+
+# Build the frontend for production
+npm --workspace frontend run build
+```
+
+> Only the root `package-lock.json` is needed. Do not keep `package-lock.json` files in `backend/` or `frontend/`.
+
+
 
 A decentralized application (dApp) for issuing and verifying academic (or any) certificates on Ethereum. Certificates are stored on IPFS, and the IPFS CID (Content Identifier) is saved on-chain for tamper-proof, decentralized verification. Verification is performed in the browser by recomputing the CID and comparing it to the on-chain value.
 
@@ -119,24 +144,30 @@ Update `CONTRACT_ADDRESS` to the deployed address from step 2.
 Ensure the ABI in this file matches the deployed contract. As of this version, only `issueCertificate` and `getCertificate` are present. No revocation or extra fields are implemented.
 
 ---
-## 5. Install & Run Frontend
+
+## 5. Install & Run Frontend (with Workspaces)
+From the project root:
 ```bash
-cd frontend
-npm install
-npm run dev
+npm install                # Installs all dependencies for all workspaces
+npm run start:frontend     # Starts the frontend dev server (Vite)
 ```
 Vite will show a local URL (default `http://127.0.0.1:5173`). Open it in the same browser where MetaMask is installed.
 
 Click the wallet connect button (RainbowKit) or custom Connect component. Ensure network is the local Ganache network.
 
+### Build Frontend for Production
+```bash
+npm --workspace frontend run build
+```
+The production build will be output to `frontend/dist/`.
+
 ---
 
-## 6. Run Backend with IPFS Integration
-In another terminal:
+
+## 6. Run Backend with IPFS Integration (with Workspaces)
+In another terminal, from the project root:
 ```bash
-cd backend
-npm install
-node server.js
+npm run start:backend
 ```
 Service listens on `http://localhost:4000`.
 
@@ -247,6 +278,7 @@ The ABI in `frontend/src/utils/contractABI.js` now matches the deployed contract
 SPDX-License-Identifier: MIT (see contract header). Add a root LICENSE file for clarity if distributing.
 
 ---
+
 ## 15. Quick Reference Commands
 ```bash
 # Start Ganache
@@ -256,11 +288,17 @@ npx ganache -p 8545 -d
 truffle compile
 truffle migrate --network development
 
-# Run backend
-cd backend && npm install && node server.js
+# Install all dependencies (workspaces)
+npm install
 
-# Run frontend
-cd frontend && npm install && npm run dev
+# Run backend (workspaces)
+npm run start:backend
+
+# Run frontend (workspaces)
+npm run start:frontend
+
+# Build frontend for production
+npm --workspace frontend run build
 ```
 
 ---
@@ -273,6 +311,13 @@ cd frontend && npm install && npm run dev
 5. Compare computed CID to stored CID; if they match, the certificate is valid
 
 ---
+
+---
+## Troubleshooting Workspaces
+- If you see missing dependencies, always run `npm install` from the root.
+- Only the root `package-lock.json` should exist; delete any in subfolders.
+- Use workspace scripts from the root for consistency.
+
 ## Contributing
 Open issues or PRs for: revocation, tests, Hardhat migration, UI polish.
 

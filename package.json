@@ -1,0 +1,14 @@
+{
+  "name": "@blockchain-certs/monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "start:backend": "npm --workspace backend start",
+    "start:frontend": "npm --workspace frontend start",
+    "install:all": "npm install --workspaces"
+  }
+}
